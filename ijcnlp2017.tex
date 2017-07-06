@@ -1,0 +1,675 @@
+%\title{ijcnlp 2017 instructions}
+% File ijcnlp2017.tex
+%
+
+\documentclass[11pt,letterpaper]{article}
+\usepackage{ijcnlp2017}
+\usepackage{times}
+\usepackage{latexsym}
+
+\usepackage{bm} % vec bf
+\usepackage[dvipdfmx]{graphicx} %graph  
+\usepackage{amsmath, amssymb} % for R   
+\usepackage{booktabs} % midrule
+\usepackage{amsmath } %|
+\usepackage{url}
+\usepackage{amsmath}
+
+% Uncomment this line for the final submission:
+%\ijcnlpfinalcopy
+
+%  Enter the IJCNLP Paper ID here:
+\def\ijcnlppaperid{***}
+
+% To expand the titlebox for more authors, uncomment
+% below and set accordingly.
+% \addtolength\titlebox{.5in}    
+
+\newcommand\BibTeX{B{\sc ib}\TeX}
+
+
+\title{Long Short-Term Memory for Japanese Word Segmentation.}
+
+% Author information can be set in various styles:
+% For several authors from the same institution:
+% \author{Author 1 \and ... \and Author n \\
+%         Address line \\ ... \\ Address line}
+% if the names do not fit well on one line use
+%         Author 1 \\ {\bf Author 2} \\ ... \\ {\bf Author n} \\
+% For authors from different institutions:
+% \author{Author 1 \\ Address line \\  ... \\ Address line
+%         \And  ... \And
+%         Author n \\ Address line \\ ... \\ Address line}
+% To start a seperate ``row'' of authors use \AND, as in
+% \author{Author 1 \\ Address line \\  ... \\ Address line
+%         \AND
+%         Author 2 \\ Address line \\ ... \\ Address line \And
+%         Author 3 \\ Address line \\ ... \\ Address line}
+% If the title and author information does not fit in the area allocated,
+% place \setlength\titlebox{<new height>} right after
+% at the top, where <new height> can be something larger than 2.25in
+\author{Derek Wong\and Lung-Hao Lee \\
+  {\tt publication@ijcnlp2017.org}}
+
+\date{}
+
+\begin{document}
+\maketitle
+
+\setlength{\abovedisplayskip}{2pt} % 上部のマージン
+\setlength{\belowdisplayskip}{2pt} % 下部のマージン
+
+\begin{abstract}
+This paper presents a Long Short-Term Memory (LSTM) neural network approach to Japanese word segmentation (JWS). 
+Previous work in Chinese word segmentation (CWS) has succeeded in using recurrent neural networks such as LSTM and gated recurrent unit (GRU). 
+However, unlike Chinese, Japanese has several character types such as hiragara, katakana, and kanji, that produce orthographic variations and make word segmentation even difficult. 
+Also, it is important for JWS task to consider global context, yet traditional JWS approaches rely on local features.
+To address this problem, we propose to employ LSTM-based approach to JWS. 
+Experimental results show that our proposed model achieves state-of-the-art accuracy on various corpora. 
+%Since we first introduce neural network approach for JWS, we investigate some neural network architecture and analyze the characteristic by comparing with current state-of-the-art method on several corpora that have different nature.
+
+\end{abstract}
+
+\section{Introduction}
+Word segmentation is one of the fundamental tasks in Japanese language processing. 
+%It is common to describe word segmentation and POS tagging as word segmentation in Japanese.
+Especially, errors in word segmentation in East Asian languages such as Japanese and Chinese which lack trivial word segmentation process can cause problems for downstream NLP application.
+Thus, it is crucial to perform accurate word segmentation for Japanese NLP tasks.
+%The current popular JWS is based on sequence labeling problem~\cite{neubig-nakata-mori:2011:ACL-HLT2011}. 
+
+
+In order to achieve high accuracy, almost all of modern methods in JWS utilize discriminative models with extensive feature engineering.
+However, machine learning-based methods tend to require hand-crafted feature templates, and suffer from data sparseness.
+To address the problem of feature engineering, neural network models have been researched for various NLP tasks \cite{liu2015multi,sutskever2014sequence,socher2013parsing,turian2010word,mikolov2013distributed}.
+Neural network models enable us to use dense feature vectors called embeddings learned through representation learning~\cite{NIPS20135021}. 
+
+Another important problem in JWS is context modeling. Traditional JWS methods employ feature templates to expand local features in a fixed window. However, global information falling outside the window is left out. In contrast, recurrent neural network models grasp long distance information owing to Long Short-Term Memory (LSTM) and record state-of-the-art accuracy in Chinese word segmentation \cite{chen-EtAl:2015:EMNLP2}. 
+However, it is not clear whether the LSTM approach is also effective in JWS, since there are many types of character sets in Japanese producing orthographic variations. 
+
+Therefore, we propose an LSTM network for Japanese word segmentation incorporating character-level embeddings and long distance dependency.
+The main contributions of this study are summarized as bellow:
+
+\begin{itemize}
+
+\item  We propose an LSTM model for JWS and investigate how to utilize sparse features such as character type, character N-gram, and dictionary feature. %To our knowledge, this is the first attempt to apply recurrent neural networks to JMA task.
+
+\item Experimental results show that our word segment model achieves state-of-the-art performance in both token-level and sentence-level accuracy on various datasets. 
+
+%\item Experimental results show that our POS tagging model achieves state-of-the-art performance in both token-level and sentence-level accuracy on various datasets.
+%We also analyze our neural network approach in various corpus to find the characteristics of neural network model.
+%We evaluate our method on the web text to examine the potential to solve out-standing problem of Japanese word segmenation.
+
+
+%Our proposed model is competitive with state-of-the-art method, despite it still has room for improvement. Although neural network approach tend to be time consuming, it is useful when the accuracy is required.  
+
+\end{itemize}
+
+\section{LSTM for Japanese word segmentation}
+%We will explain Japanese word segmentation using LSTM.
+%First, we explain the word segmentation and POS tagging task.
+%Second, we describe the structure of the neural network.
+%Finally, we focus on the feature of the neural network because the contribution of our research is feature of neural network. 
+%A summary of feature for neural network is shown in Table 1. %~\ref{summary}    何かがおかしくインデックスが表示されない
+
+%\subsection{Task of Word Segmentation and POS tagging} 
+%{\bf Word Segmentation.}
+%In this research, Japanese word segmentation is performed by pipeline processing.
+%First, word segmentation is performed, and then POS is performed on the output.
+%Both of these two tasks can be regarded as a sequence labeling problem~\cite{kudo-yamamoto-matsumoto:2004:EMNLP,nakagawa2004chinese}.
+%In addition, there are many common parts in the information required as input between the two tasks.
+%One of the popular methods of JMA is to formulate the task as a sequence labeling problem~\cite{kudo-yamamoto-matsumoto:2004:EMNLP,nakagawa2004chinese}.
+Machine learning-based approaches for word segmentation build a classifier from an annotated corpus to classify whether there exists word boundaries around the target character. 
+In word segmentation, each character is assigned to several labels such as \{B, I, E, S\}, \{B, I, E\}, and \{B, I\} to indicate the segmentation. \{B, I, E, S\} represent {\it Begin}, {\it Inside}, {\it End}, and {\it Single}, respectively. 
+
+%In POS tagging, each word is labeled with part of speech such as noun, verb, adjective.
+
+
+%In the most simple label set \{B, I\}, ``B'' represents there is a word boundary to the left of the character and ``I'' represents there is no word boundary to the left of the character. \{E, M\} can be regarded as an extension to ``I'', in a sense that they indicate there is no word boundary to the left of the character, but they represent whether there is a word boundary to the right of the character or not, respectively.  ``S'' can also be regarded as an extension to ``B'' indicating there exist word boundaries both to the left and right to the target character.  
+Classification of these labels can be performed by running Viterbi algorithm over a word lattice~\cite{kudo-yamamoto-matsumoto:2004:EMNLP,nakagawa2004chinese,kaji-kitsuregawa:2013:IJCNLP} or by making prediction independently (Neubig et al., 2011). However, these previous approaches use feature templates to expand window-based local features, and suffer from data sparseness and lack of global information in a sentence. 
+
+To address this problem, we propose to use character-based embeddings and Long Short Term Memory (LSTM) network.
+% that is known to work well in incorporating long dependency in NLP \cite{luong-pham-manning:2015:EMNLP,dai2015semi}. 
+%\subsection{LSTM Network} 
+ %In this section, we describe an LSTM Network for JWS. 
+Figure \ref{ws_arch} shows an overview of the proposed framework. Our model is similar to previous work in CWS (Chen et al., 2015) but incorporates character-based N-gram embeddings and a word dictionary sparse feature. 
+%The first two serve as baselines of our proposed method in that feed forward neural network do not take into consideration any information outside the local window and recurrent neural network fails to accurately learn long history.
+ 
+ \begin{figure*}[t]    
+ \begin{center}    
+ \includegraphics[bb=0 0 60 35,width=140mm]{ws_arch.png}              
+ \caption{Overview of our LSTM for Japanese word segmentation.}    
+ \label{ws_arch}    
+\end{center}    
+\end{figure*}
+
+
+ 
+%\subsection{Feed-Forward Neural Network} GGGGGGGGGGAAAAAAAAAAANNNNNNNNNNNBBBBBBBBBBBAAAAAAAAAAAAAARRRRRRRRRRRRRREEEEEEEEEEEEEEEEEE
+%The most common sequence labeling approach is based on a local window \cite{kudo-yamamoto-matsumoto:2004:EMNLP,neubig-nakata-mori:2011:ACL-HLT2011}. 
+%The window approach assumes that the label of a character depends on its neighboring characters.
+%Given an input sentence, a window of size $k$ is shifted over the sentence from character $c_{1}$ to $c_{n}$, where $n$ is the length of the sentence.
+%For each character $c_{t}$, the context characters $(c_{t-2}, c_{t-1}, c_{t}, c_{t+1}, c_{t+2})$ are fed into the classifier when the window size is 5. 
+%Furthermore, start and terminal symbols are appended to a sentence as pre-processing. 
+%The classifier learns weights for features created from the context characters using feature templates, and classifies the label of a character using the learned weights during decoding.
+
+%However, previous approaches using feature templates suffer from data sparseness and overfitting. 
+%They typically need to filter out infrequent features using certain threshold~\cite{takahasi-mori:2015:EMNLP} and/or employ feature selection such as L1 and L2 regularization~\cite{kudo-yamamoto-matsumoto:2004:EMNLP,neubig-nakata-mori:2011:ACL-HLT2011}. To address the data sparseness problem, we propose to use character embeddings we will describe in Section \ref{feature} (Figure \ref{architecture}).
+
+In our neural architecture, character based embeddings for context characters are extracted by the lookup table layer and concatenated into a single vector $\bm{x_t}$$\in$ $\mathbb{R}^{H_{1}}$, where $H_{1}$ is the size of input layer. 
+Then $\bm{x_{t}}$ is passed into the next layer which performs linear transformation $\bm{W_{1}}$  followed by an element-wise activation function $g$ such as sigmoid and $\tanh$ functions:
+%\cite{collobert:2008}. 
+%ここで，${H_{1}}$は（a）の入力文字列の embedding 層のサイズであり，その値は，$k × d$である．また，$d $は各文字のembedding の次元数である．
+
+
+\begin{equation}
+\label{ffnn_h}
+ \bm{h_{t}} = g(\bm{W_{1}}\bm{x_{t}} + \bm{b_{1}})
+ \vspace{6pt}
+\end{equation}
+where $\bm{W_1}$$\in$ $\mathbb{R}^{H_{2} \times H_{1}}$, $\bm{b_{1}}\in\mathbb{R}^{H_{2}}$, and $\bm{h_{t}}\in\mathbb{R}^{H_{2}}$. 
+$H_{2}$ is a hyper-parameter which indicates the number of hidden units in the hidden layer, $\bm{b_{1}}$ is a bias vector and $\bm{h_{t}}$ is the resulting hidden vector. The final output is obtained by performing a softmax function after a similar linear transformation $\bm{W_2}$ to the hidden vector:
+
+\begin{equation}
+ \bm{y_{t}} = \mathit{softmax}(\bm{W_{2}}\bm{h_{t}} + \bm{b_{2}})
+ \vspace{6pt}
+\end{equation}
+where $\bm{W_2}$$\in$ $\mathbb{R}^{|T| \times H_{2}}$, $\bm{b_{2}}\in\mathbb{R}^{|T|}$, and $\bm{y_{t}}\in\mathbb{R}^{|T|}$. Again, $\bm{b_{2}}$ is a bias vector and $\bm{y_t}$  is the distribution vector for each possible label. In Japanese word segmentation, the most prevalent label set is \{B, I, E, S\} although the label sets hardly have large effect on accuracy.
+
+
+The RNN addresses the problem of lack of history by using recurrent hidden units whose output at each time is dependent on that of the previous time. 
+%More formally, given a sequence $\bm{x_{t}}$, the RNN updates its recurrent hidden unit $\bm{h_{t}}$ by the following function: 
+%\begin{equation}
+%\bm{h_{t}} = g(\bm{Uh_{t-1}} + \bm{W_{1}}\bm{x_{t}} + \bm{b_{1}}) 
+%\end{equation}%
+%where $\bm{U} \in \mathbb{R}^{H_2\times H_2}$ and $W_1 \in \mathbb{R}^{H_1 \times H_2}$ are  linear transformations for the hidden units, $b_1 \in \mathbb{R}^{H_2}$ is a bias term, and $g$ is an element-wise activation function such as sigmoid and $\tanh$. $H_2$ is the number of hidden units in the hidden layer.
+Though the recurrent neural network (RNN) is shown to be successful on many NLP tasks such as language modeling~\cite{mikolov2010recurrent} and text generation~\cite{sutskever2011generating}, it fails to propagate dependencies over a long distance because of the vanishing and exploding gradient problem~\cite{hochreiter1997long}. 
+%There are several Long Short Term Memory (LSTM). 
+
+LSTM provides addresses the problem by incorporating memory units to learn when to forget previous information and when to update the memory cells given new information.
+%Therefore, it is a natural choice to apply LSTM network to word segmentation task since the LSTM network can learn from data with long range temporal dependencies (memory) due to the considerable time lag between the inputs and their corresponding outputs.
+%In addition, the LSTM has been applied successfully in many NLP tasks, such as sentiment analysis~\cite{wang-EtAl:2015:ACL-IJCNLP2} and machine translation~\cite{sutskever2014sequence}.
+%The core of the LSTM model is a memory cell $c$ encoding memory at every time step of what inputs have been observed up to this step. 
+%The behavior of memory cell $c$ is controlled by three gates called input gate $i$, forget gate $f$ and output gate $o$. 
+%The definitions of the gates, a memory cell, output and hidden vectors are as follows:
+%More formally, given a sequence $\bm{x_t}$, LSTM updates its recurrent hidden unit $\bm{h_t}$ by the following functions:
+
+%\begin{eqnarray}
+%\bm{i_{t}} &=& \sigma(\bm{W_{ix}}\bm{x_{t}} +\bm{W_{ih}h_{t-1}}) \\
+%\bm{f_{t}} &=& \sigma(\bm{W_{fx}}\bm{x_{t}} +\bm{W_{fh}h_{t-1}}) \\
+%\bm{c_{t}}& =&  \bm{f_{t}} \odot \bm{c_{t}} + \bm{i_{t}} \odot  \phi (\bm{W_{cx}x_{t}} + \bm{W_{ch}h_{t-1}}) \\
+%\bm{o_{t}} &=& \sigma(\bm{W_{ox}}\bm{x_{t}} +\bm{W_{oh}h_{t-1}}) \\
+%\bm{h_{t}} &=& \bm{o_{t}} \odot \phi(\bm{c_{t}})
+%\end{eqnarray}
+
+%\noindent
+%where $\sigma$ and $\phi$ are the sigmoid and $\tanh$ functions, respectively.
+%All the vectors have the same size as the hidden vector.
+%The parameter matrices $\bm{W}$ with different subscripts are all square matrices, where $\bm{W_{ic}}$, $\bm{W_{fc}}$ and $\bm{W_{oc}}$ are diagonal matrices. $\odot$ denotes the element-wise product of the vectors.
+
+
+\subsection{Character-Level Features}
+In this section, we explain character-level feature. As shown in Table 1, we introduce Character embedding, and Character type embedding, and its N-gram for WS. Here, we describe the character vector $\bm{c_{t}}$ for JWS. Formally, we define the character vector $\bm{c_{t}}$ as follows:
+
+\begin{equation}
+\bm{c_{t}} = \bm{l_{t}} \oplus \bm{e_{t}}
+\vspace{6pt}
+\end{equation}
+where $\oplus$ denotes concatenation of the vectors, and $\bm{l_{t}} $ and $ \bm{e_{t}}$ stand for  character embeddings and character type embeddings, respectively. These embeddings are fed to the input layer. We explain three features that are frequently used in JWS, and describe how we realize them as embeddings in our architecture.
+
+\subsubsection{Character Embeddings}
+
+%The first step of using neural network to process symbolic data is to represent them into distributed vectors, also called embeddings~\cite{Bengio:2003:NPL:944919.944966,collobert:2008}.
+
+In a word segmentation task, we make a character dictionary $C$ of size $|C|$. 
+%Unless otherwise specified, the character dictionary is extracted from the training set and unknown characters are mapped to a special symbol that is not used elsewhere. 
+Traditional machine-learning approaches using feature templates treat each character independently as a one-hot vector.
+However, it is natural for a neural network model to represent descrete data as distributed vectors called embeddings~\cite{Bengio:2003:NPL:944919.944966,collobert:2008}. Representation learning is one of the actively studied topics in NLP because it can overcome the data sparseness problem. Thus, we follow the same practice to represent each character  as a real-valued vector $v_{c}$ $\in$ $\mathbb{R}^{d}$ where $d$ is the dimensionality of the vector space. 
+%The character embeddings are then concatenated to an input vector $x_{t}$ $\in$ $\mathbb{R}^{d}$.
+For each character, the corresponding character embedding $v_{c}$ is picked up by a lookup table. 
+
+%Here, the lookup table layer can be regarded as a simple projection layer where the character embedding for each context character is obtained by table lookup operation according to its index.
+
+\subsubsection{Character Type Embeddings}
+Character embeddings are very effective in identifying prefixes and postfixes. However, they may be too sparse when they cross a word boundary. To address this problem, it is known to be helpful to exploit character types such as hiragana, katakana, and kanji (e.g. ひらがな，カタカナ，漢字) for Japanese word segmentation~\cite{neubig-nakata-mori:2011:ACL-HLT2011}. For example, katakana sequence tends to be a loan word, and transition from a character type to another is likely to be a word boundary \cite{nagata1999part}. 
+
+
+%The one-hot vector is then  converted to character type embeddings as well as character embeddings. The embeddings are also concatenated to input vector of our neural network.   
+
+\subsubsection{Character-Based N-gram Embeddings}
+As well as character type, its N-gram is effective in JWS \cite{neubig-nakata-mori:2011:ACL-HLT2011}.
+Thus, we incorporate character type sequence information as embeddings. 
+We convert each character to a one-hot vector
+%$\bm{ct}$ $\in$ $\mathbb{R}^{|ct|}$ 
+corresponding to its character type. The one-hot vector is either composing of hiragana, katakana, kanji, alphabet, number, symbol, start symbol and terminal symbol. 
+Deep neural network has the advantage of dealing with a sparse vector by converting it to a dense vector. 
+It enables us to utilize a sparse feature such as character tri-gram. 
+In addition, character-based N-gram is effective for the task of sentence similarity and part-of-speech tagging \cite{wieting-EtAl:2016:EMNLP2016} and for the task of Japanese morphological analysis~\cite{neubig-nakata-mori:2011:ACL-HLT2011}. Therefore, we use N-gram for character and character type embeddings.
+More precisely, we create a one-hot vector for not only each uni-gram but also for each bi-gram and tri-gram.
+Each embeddings are picked up by a lookup table as well as uni-gram embeddings.
+
+We define the embedding vectors $\bm{l_{t}}$ and $\bm{e_{t}}$ as follows:
+
+\begin{eqnarray}
+\bm{l_{t}} &=& \bm{l_{[t-2:t]}} \oplus \bm{l_{[t-1:t]}} \oplus \bm{l_{[t]}} \\
+\bm{e_{t}} &=& \bm{e_{[t-2:t]}} \oplus \bm{e_{[t-1:t]}} \oplus \bm{e_{[t]}} 
+\vspace{6pt}
+\end{eqnarray}
+where $\bm{l_{[a:b]}}$ stand for the embedding for the strings from a to b. The same is true for $\bm{e_t}$.
+%For example, $\bm{l_{[t-2:t]}}$ represents the embeddings for the string from
+
+%Also, when N is 4, $\bm{ce^{N}_{t}}$ is follows: 
+%\begin{equation}
+%\bm{ce^{N}_{t}} = \bm{ct_{t-3}ct_{t-2}ct_{t-1}ct_{t}}
+%\end{equation}
+%The same is true of $\bm{cte^{N}_t}$.
+
+%DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD
+%DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD
+\subsection{Word dictionary}
+%In this section, we explain word-level feature. As shown in Table 1, we describe Word dictionary for WS, Word/POS dictionary, Word uni-gram, and Word character type  for POS.
+
+
+\begin{figure*}[t]    
+ \begin{center}    
+ \includegraphics[bb=0 0 60 30,width=130mm]{dictionaryfeature.png}              
+ \caption{Example of a dictionary vector.}    
+ \label{dictionaryfeature}    
+\end{center}    
+\end{figure*}
+
+Character embeddings, character type embeddings and their N-gram extensions do excellent job at learning character-based features from an annotated corpus. However, character-based JWS models lack word-level information which is useful to decide which character sequence constitutes a word.
+Thus, Japanese morphological analyzer often makes use of a dictionary.
+It is essential for JWS using a word lattice during decoding in order to take advantage of word-level information such as unigram and bigram, though it is not necessary for character-based JWS approaches.
+
+However, it is not trivial to encode dictionary information into a neural network architecture.
+%\new
+\newcite{tsuboi:2014:EMNLP2014} suggests that it is not effective to learn both dense continuous and sparse discrete vector representations in the same layer. 
+Thus, we follow \newcite{tsuboi:2014:EMNLP2014}  to make a aparse dictionary vector, but instead of learning embeddings, we use it for the input to the final output layer shown in Figure \ref{ws_arch}.
+
+
+%An illustration of dictionary feature is in 
+Figure \ref{dictionaryfeature} illustrates how we create a dictionary vector.
+The dictionary vector composes of three parts: left side feature $L$, right side feature $R$, and inside feature $I$. For example, L2 is activated If a word whose length is 2 exists in the dictionary on the left side of the prediction point. If the length of the word is over a certain threshold, we cut off the word length to the length. In our work, we adopt 4 as the threshold following~\newcite{neubig-nakata-mori:2011:ACL-HLT2011}.
+%We thus make the feature $R$ vector as the feature $L$. 
+Unlike $L$ and $R$, 
+%$I$ is slightly special. In $L$ and $R$, the start point of a word candidate are restricted but $I$ is not so. 
+$I2$ is fired if there exists a word that spans across the boundary and has length 2. Note that $I$ can be activated only if the length of the word is over 1  according to its definition.
+%The other way of making dictionary feature is same as $L$ and $R$. 
+Finally, these feature vectors are concatenated to one vector, called dictionary vector $\bm{d_{t}}$.
+
+The dictionary vector $\bm{d_{t}}$ is concatenated to the current hidden vector. 
+%It is because it is not effective to convert dense vector representation as feature embeddings as well as character embeddings \cite{tsuboi:2014:EMNLP2014}. 
+Note that the current hidden vector  $\bm{h_{t}}$ is on top of LSTM network.
+Formally, the new hidden vector $\bm{h^{\prime}_{t}}$ is defined as follows:
+
+\begin{equation}  
+\bm{h^{\prime}_{t}} = \bm{h_{t}} \oplus \bm{d_{t}}
+\vspace{6pt}
+ \end{equation}
+
+
+%\subsubsection{Word dictionary}
+%TBD
+%\subsubsection{Word uni-gram and Word character type}
+%TBD
+
+
+
+
+\subsection{Trainig}
+In this work, we adopt a cross entropy error as a loss function. Given output vector $\bm{y_{t}}$, the loss to a correct distribution corresponding to $\bm{c_{t}}$ is computed by following:
+
+\begin{equation} 
+ \bm{loss} = \sum_{t} -\bm{i_t} \log \bm{y_t} +  \frac{1}{2}\lambda \|\theta\|_{2}^2
+ \vspace{6pt}
+ \end{equation}
+
+
+
+\noindent
+where $\bm{i_{t}}$ stands for correct label distribution, $\lambda$ is a hyper parameter of L2 regularization, and $\theta$ indicates all parameters of our model. 
+ 
+Following~\cite{socher2013parsing}, we also use the diagonal variant of AdaGrad~\cite{duchi2011adaptive} with mini batchs to minimize the objective. The update for the  $i$-th parameter $\theta_{t,i}$ at time step $t$  is defined as follows:
+\begin{equation}
+\theta_{t,i} = \theta_{t-1,i} - \frac{\alpha }{\sum^{t}_{t=\tau} g^{2}_{\tau,i}}g_{t,i} 
+\vspace{6pt}
+\end{equation}
+
+\noindent
+where $\alpha$ is the initial learning rate and $g_{\tau} \in \mathbb{R}^{|\theta_{i}|} $ is the subgradient at time step $\tau$ for parameter $\theta_{i}$. 
+
+
+
+
+
+
+
+%EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE
+%EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE
+ 
+\section{Experiments}
+\begin{figure}[t]    
+ \begin{center}    
+ \includegraphics[bb=0 0 60 43,width=80mm]{learning_curve.png}              
+ \caption{Performances of our work on BCCWJ development set.}    
+ \label{learning_curve}    
+\end{center}    
+\end{figure}
+
+
+
+
+We evaluated our proposed neural word segmentation method on several JWS corpora.
+To evaluate neural network architectures, we prepare feed forward network (FFNN) and recurrent neural network (RNN) for JWS. FFNN is illustrated by a dotted line in Figure \ref{ws_arch}. Also, RNN uses the same inputs as LSTM but does not use any LSTM units.
+
+Our experiments were separated to two parts. First, we compared neural network architectures and features with previous state-of-the-art method on a balanced corpus (See top of Table \ref{state_result}). 
+%Second, we evaluate our Japanese adaptation such as character type and dictionary feature and compare our method with state-of-the-art method (See bottom of Table \ref{state_result}). 
+Second, we evaluated our method on a newspaper corpus annotated with different segmentation criterion (See Table \ref{kc_result}). 
+\subsection{Datasets}
+\begin{table}[t]
+                                                                                                                                                                                                                                                                                             
+ \begin{center}                                                                                                                                                                                                                                                                                                             
+\caption{The detail of the corpora used in our experiments.}                                                                                                                                                                                                                                                                                 
+\label{bccwj}                                                                                                                                                                                                                                                                                                              
+ \begin{tabular}{p{45mm} rr}                                                                                                                                  
+  \toprule                                                                                                                                                    
+        \multicolumn{1}{c}{domain} & \multicolumn{1}{c}{train} &\multicolumn{1}{c}{test} \\                                                                                             
+        \midrule                                                                                                                                                                                                                                                                                                            
+    Yahoo! Japan Answers  &5,880&496 \\    
+    Yahoo! Japan Blog&7,036&506\\                                                                                                                                  
+    White paper&5,471 &496 \\                                                                 
+    Magazine &12,369 &492  \\   
+    Newspaper &16,222 &495\\                                                                                                                                
+    Book& 9,470&499 \\
+    BCCWJ All  &56,448 &2,984 \\  \hline
+    KC All &18,455 & 1,234  \\                                                                                                                                                                                                                                                                                                                                                                   
+    \bottomrule                                                                                                                                               
+    \end{tabular}                                                                                                                                                                                                                                                                                                           
+    \end{center}                                                                                                                                                                                                                                                                                                            
+ \end{table}  
+
+We evaluated our methods on two different datasets: a popular Japanese corpus BCCWJ (Balanced Corpus of Contemporary Written Japanese)~\cite{maekawa2014balanced} and another widely used Japanese corpus Kyoto University Corpus version 4.0 (KC). 
+BCCWJ is composed of various domains, whereas KC is only from newswire domain. The detail of these corpora is shown in Table \ref{bccwj}.  
+We followed the train and test split of BCCWJ according the Project Next NLP\footnote{\url{http://plata.ar.media.kyoto-u.ac.jp/mori/research/topics/PST/NextNLP.html}}. 
+We used the same train and test split of KC with previous work~\cite{kudo-yamamoto-matsumoto:2004:EMNLP,uchimoto2001unknown}.
+
+For word-level features,
+% \new
+\newcite{neubig-nakata-mori:2011:ACL-HLT2011} do not use any external dictionary but use the dictionary made from the training corpus. Hence, we followed the same scenario and add all the words in training corpus but left out singletons to prevent overfitting on the training data as described in \cite{neubig-nakata-mori:2011:ACL-HLT2011}.
+To analyze the effect of the dictionary feature, we recreated a larger dictionary made from both of training and test sets. This is called gold dict in Table \ref{state_result}.
+
+
+\subsection{Tools}
+In our experiments, we used a popular JWS tool KyTea (ver.0.4.6) \footnote{\url{http://www.phontron.com/kytea/index.html}} that implements \cite{neubig-nakata-mori:2011:ACL-HLT2011}. We trained a KyTea model by the provided scripts for training. It internally creates a dictionary as described above. Pre-trained KyTea models adopt own word segmentation criterion extended from that of BCCWJ so we re-trained KyTea models to make a fair comparison.
+%a model of KyTea in this work is trained by only training data so the output of our experiments follows a criterion of training data.
+
+Also, we implemented our neural network-based JWS models including FFNN, RNN and LSTM using a neural network framework called Chainer (ver 1.4.0)\footnote{\url{http://chainer.org}}\cite{chainerlearningsys2015}. 
+
+\subsection{Hyper Parameters}
+We investigated several parameter combinations inspired by previous work~\cite{chen-EtAl:2015:EMNLP2} by preliminary experiments. The complete set of parameters used in our work is shown in Table \ref{parameter}. We used BCCWJ development set for tuning hyper parameters. According to Figure \ref{learning_curve}, it can be seen that our method is very fast to learn although we use CPU. It takes 24 hours per epoch. 
+
+\noindent
+{\bf Window size.} In preliminary experiments, we found the window size 5 is better than others in  either accuracy or time. Window size 7 did not improve F1 score much from window size 5, so we chose 5  because of the trade-off between accuracy and time.
+
+\noindent
+{\bf Dimension of character type embeddings.} Although we fixed the dimension of character embeddings following (Chen et al., 2015b), we searched for six dimensions of character type embeddings. 
+We chose the dimension of character type embeddings to be 10 because 10 yields better performance than others in either accuracy or time according to preliminary experiments. Although window size 20 and 50 are competitive with 10, we chose 10 considering the time complexity.
+
+\noindent
+{\bf Label set.}  In CWS, the label set \{B, I, E, S\} is often used. In contrast, in JWS, various label sets are adopted. We explored three label sets and found that \{B, I, E, S\} is slightly better than the others.
+
+\noindent
+{\bf Learning rate.} In this task, learning rate largely affects accuracy. Although learning rate 0.1 seemed to be larger than the one in other NLP tasks, small learning rate such as 0.01 degrades accuracy and has large effect on a learning time. Thus, we picked learning rate 0.1 for all the experiments throughout.
+
+%As over all impression, in this task, the size of hyper parameter is better too big than too small but too big hyper parameter is time-consuming.
+
+\begin{table}[t]
+                                                                                                                                                                                                                                                                                                                                                                                                                                 
+ \begin{center}                                                                                                                                                                                                                                                                                                             
+\caption{Hyper parameter set of our work.}                                                                                                                                                                                                                                                                                  
+\label{parameter}                                                                                                                                                                                                                                                                                                           
+ \begin{tabular}{p{50mm}| r }
+  \toprule
+    \multicolumn{1}{c|}{hyper parameter} & \multicolumn{1}{c}{value} \\
+    \midrule                                                                                                                                             
+    window size & 5 \\                                                                                                                                        
+    character embeddings &  100\\                                                                                                                           
+    character type embeddings  &  10\\                                                                                                                          
+    hidden layer size &  150\\                                                                                                                                     
+    label set& \{B, I, E, S\} \\                                                                                                                                      
+    learning rate  &0.1\\                                                                                                                                           
+    %  & η=0.2\\ \hline                                                                                                                                       
+    coefficient of L2  regularization & 0.0001\\ %正則化項の係数 & 0.0001\\                                                                                                                              
+   % Dropout rate （入力層のおける）& p = \\ \hline
+   \bottomrule
+     \end{tabular}                                                                                                                                                                                                                                                                                                           
+    \end{center}                                                                                                                                                                                                                                                                                                            
+ \end{table}
+ 
+                  
+\subsection{Results}
+Tables \ref{state_result} and \ref{kc_result} show experimental results on BCCWJ and Kyoto Corpus. In both corpora, our LSTM-based method outperformed the state-of-the-art method \cite{neubig-nakata-mori:2011:ACL-HLT2011}. Table \ref{error} illustrates the performance of two methods per domain breakdown. Our proposed method achieved higher accuracy in terms of token-level F1 and sentence-level accuracy in four domains out of six, resulting in improvements in overall performance.
+
+
+\section{Discussion}
+\paragraph{Models.}
+Table \ref{state_result} shows that LSTM is superior to FFNN and RNN using the same feature set (character embeddings only). It demonstrates the effectiveness of modeling a context by LSTM.
+
+\noindent
+{\bf Character type.} Comparing {\it LSTM} with {\it LSTM + character type}, F1 improves by 0.25 points. This result shows that character type embeddings are useful in JWS. However, the gain of using character type embeddings is smaller than changing the model to LSTM. 
+This suggests that the choice of architectures impacts more on the final accuracy.
+
+\noindent
+{\bf Dictionary feature.} When we add a dictionary feature to {\it LSTM + character type}, F1 improves by 0.37. This result shows that dictionary feature is effective in JWS. However, when we add the dictionary feature to {\it LSTM + character type + N-gram}, the dictionary feature does not give any notable difference. We suppose that character based N-gram embeddings subsume the dictionary feature because our dictionary is made from training corpus. 
+Additional experiment using the gold dictionary created from the test corpus supports this hypothesis\footnote{Note that we removed the singletons in the combined corpus when creating the gold dictionary, so the test corpus may still contain words not in the gold dictionary.}. 
+
+\noindent
+{\bf N-gram embedding.} Comparing {\it LSTM + character type} with {\it LSTM + character type + N--gram}, N-gram embeddings drastically improve the performance of our model by a large margin. Traditional machine learning-based approaches such as CRF and SVM are not capable to take advantage of such sparse features, but LSTM-based proposed model successfully exploits this information.
+
+ \begin{table}[t]     
+ 
+                                                                                                                                                                                                                                                                                                 
+ \begin{center}                                                                                                                                                                                                                                                                                                             
+\caption{Experimental results of Japanese word segmentation on BCCWJ.}                                                                                                                                                                                                                                                                                 
+\label{state_result}                                                                                                                                                                                                                                                                                                              
+ \begin{tabular}{p{64mm}| r}                                                                                                                                  
+  \toprule                                                                                                                                                    
+        \multicolumn{1}{c|}{Methods} & \multicolumn{1}{c}{F1}\\                                                                                             
+        \midrule                  
+      FFNN  & 96.53 \\                                                                                                                                     
+      RNN  &  96.46 \\                                                                                                                               
+      LSTM  & 97.00 \\                                                                                                                                                                                                                                                                                          
+      LSTM + char type  & 97.25 \\    
+      LSTM + char type + dict & 97.37 \\                                                                                                                             
+     % LSTM + character type + 1-2gram &  98.05 \\\hline
+      LSTM + char type + N-gram & 98.41\\ 
+    %  LSTM + character type + 1-4gram & ***\\ \hline
+      LSTM + char type + N-gram + dict&{\bf 98.42} \\ 
+      LSTM + char type + N-gram + dict (gold)& 98.67 \\  \hline
+      KyTea 0.4.6 & 98.34 \\                                                                                                                                                                                                                                                                                                                   
+    \bottomrule                                                                                                                                               
+    \end{tabular}                                                                                                                                                                                                                                                                                                           
+    \end{center}                                                                                                                                                                                                                                                                                                            
+ \end{table} 
+ 
+ 
+\begin{table}[t]
+                                                                                                                                                                                                                                                                   
+ \begin{center}                                                                                                                                                                                                                                                                                                             
+\caption{Experimental results of Japanese word segmentation on Kyoto Corpus.}                                                                                                                                                                                                                                                                                 
+\label{kc_result}                                                                                                                                                                                                                                                                                                              
+ \begin{tabular}{p{60mm}| r }                                                                                                                                  
+  \toprule                                                                                                                                                    
+        \multicolumn{1}{c|}{Methods} & \multicolumn{1}{c}{F1}\ \\                                                                                             
+        \midrule                                                                                                                                                                                                                                                                                                            
+    LSTM + char type + N-gram + dict  & {\bf 96.47}\\  \hline                                                                                                                            
+    KyTea 0.4.6 &  96.21\\ 
+    \bottomrule                                                                                                                                               
+    \end{tabular}                                                                                                                                                                                                                                                                                                           
+    \end{center}                                                                                                                                                                                                                                                                                                            
+ \end{table}  
+ 
+\section{Error Analysis}
+
+\begin{table*}[t]   
+                                                                                                                                                                                                                                                                                                
+ \begin{center}                                                                                                                                                                                                                                                                                                             
+\caption{Token-level and sentence-level performance on various domains. The first term of the number of incorrect sentences indicates that both JWS predicted wrong result, and the second term indicates that only the corresponding method predicted wrong result, respectively. }                                                                                                                                                                                                                                                                                 
+\label{error}                                                                                                                                                                                                                                                                                                              
+ \begin{tabular}{p{53mm}|r|r|r|r}                                                                                                                                  
+  \toprule                                                                                                                                                    
+        \multicolumn{1}{c|}{Domain} & \multicolumn{2}{c|}{KyTea 0.4.6} & \multicolumn{2}{c}{This work} \\   \cline{2-5}
+        \multicolumn{1}{c|}{} & \multicolumn{1}{c|}{F1} & \multicolumn{1}{c|}{\# of incorrect sent.} & \multicolumn{1}{c|}{F1} & \multicolumn{1}{c}{\# of incorrect sent.} \\   
+         %\multicolumn{1}{c|}{domain} & \multicolumn{1}{c|}{F1} &  \multicolumn{1}{c|}{# of incorrect sent.} & \multicolumn{1}{c|}{F1} &  \multicolumn{1}{c}{# of incorrect sent.}  \\                                                                                             
+        \midrule                                                                                                                                                                                                                                                                                                            
+      Yahoo! Japan Answers& 98.38 &50+25& {\bf 98.44} &  50+{\bf19}\\     
+      Yahoo! Japan Blog&  {\bf 99.75}& 76+22& 99.73&76+{\bf21}\\                                                                                                                              
+      White paper& {\bf 99.20} &60+{\bf21}  &99.08& 60+24\\
+      Book&  98.15&63+{\bf19} &  {\bf 98.28}&63+28\\ 
+      Magazine & 96.70& 73+29  &{\bf 97.25}&73+{\bf17} \\ 
+       Newspaper&  98.19 &60+36&  {\bf 98.46}& 60+{\bf15}\\  \hline                                                  
+      All  & 98.34 &382+152& {\bf 98.42} & 382+{\bf124}\\                                                                                                                                                                                                                                                                                                                                       
+    \bottomrule                                                                                                                                               
+    \end{tabular}                                                                                                                                                                                                                                                                                                           
+    \end{center}                                                                                                                                                                                                                                                                                                            
+ \end{table*} 
+
+\begin{table*}[t] 
+                                                                                                                                                                                                                                                                                                                                                
+ \centering                                                                                                                                                                                                                                                                                                                                    
+ \begin{center}                                                                                                                                                                                                                                                                                                                                
+\caption{Error example of this work and KyTea. The character ``\textbar '' indicates word boundary and bold face indicates inccorrect part.}                                                                                                                                                                                                                                                                           
+ \label{error_analysis}                                                                                                                                                                                                                                                                                                                          
+ \begin{tabular}{ l | l | l} \hline  
+   \multicolumn{1}{c|}{Methods} & \multicolumn{1}{c|}{Example} &\multicolumn{1}{c}{correct/inccorect}\\         
+ \toprule    
+ %\midrule                                                                                                                                                                                                                                                                                                       
+      This work & エルマー \textbar {\bf とりゅう} \textbar の \textbar 絵 \textbar で  & incorrect\\
+     KyTea 0.4.6 &エルマー \textbar と \textbar りゅう \textbar の \textbar 絵 \textbar で  &correct\\ \hline
+      This work &うち \textbar {\bf がまんま} \textbar その \textbar 環境 \textbar です \textbar 。&incorrect\\
+      KyTea 0.4.6 & うち \textbar が \textbar まんま \textbar その \textbar 環境 \textbar です \textbar 。&correct\\ \hline
+     This work & 七百 六十 \textbar 一 \textbar の \textbar ため池 \textbar など \textbar 被害&correct\\  
+     KyTea 0.4.6 &  七百 \textbar 六十 \textbar 一 \textbar の \textbar {\bf ため \textbar 池} \textbar など \textbar 被害 &incorrect  \\ \hline
+     This work &  思う \textbar と \textbar うんざり \textbar です \textbar ．&correct\\
+     KyTea 0.4.6 & 思う \textbar {\bf とうんざり} \textbar です \textbar．&incorrect\\
+     \bottomrule                                                                                                                                                                                                          
+   \end{tabular}                                                                                                                                                                                                                                                                                                                               
+    \end{center}                                                                                                                                                                                                                                                                                                                               
+ \end{table*}
+
+
+\subsection{Effect of Domain}
+To find the characteristic of our method, we conducted error analysis by comparing our method with KyTea on various domains. We computed F1 for each domain of BCCWJ and counted the number of incorrect sentences Table \ref{error} summarizes the token-level and sentence-level comparison between our model and KyTea. 
+We picked up the pairs that exhibited a large margin in F1. Namely, we analyze White paper, Magazine, and Book).
+
+{\bf White paper.} This domain comprise official documents published by the government. Due to this, kanji covers a large portion of the corpus. In addition, the number of character per sentence is large. In this domain, our method is only inferior to 
+\newcite{neubig-nakata-mori:2011:ACL-HLT2011} by both F1 and the number of incorrect sentence, possibly because a long sequence introduced noise to our LSTM-based models.. 
+
+{\bf Magazine.} This domain contains colloquial expressions as well as formal ones.
+Due to the colloquial expressions, hiragara occupies a large portion of this corpus. 
+F1 for this domain is the lowest in both methods. 
+We found that hiragara makes the poor performance. However, our method is more robust than KyTea in this domain. We suppose it is due to the modeling of contextual information since hiragana sequence tends to fall outside the local window size. 
+
+{\bf  Book.}  This domain often includes named entities (NE) such as a company name. This corpus is balanced in terms of proportion of character types.
+Overall, our model tends to be robust for compounds of different character type (e.g. Famiポート (Fami Port; multimedia vending machine)), whereas
+\newcite{neubig-nakata-mori:2011:ACL-HLT2011}'s model correctly classifies words composed of unique character type (e.g. ポストドクター (Postdoc)). We suppose that the difference between token-level and sentence-level accuracy highlights the characteristic of the methods. Our method produces less errors in general, but it does not perform word segmentation consistently across the corpus.
+
+
+\subsection{Example}
+In order to investigate the characteristics of our method from another angle, we show actual examples of word segmentation. Table \ref {error_analysis} shows comparison of four examples between this work and KyTea 0.4.6.  
+
+
+There are two characteristics of our method. One is that strings with the same character type tend to form a word unit. This characteristic is demonstrated by the first example and the second example. 
+In the first example, \mbox{``と (and)''} and \mbox{``りゅう (dragon)''} are different words, but they have same character type ``Hiragana'', so they are incorrectly combined to form a fake word. In the second example as well,\mbox{``が (NOM)'' }and \mbox{``まんま (just)''} are incorrectly connected. The kind of error tends to occur when the character type is \mbox{``Hiragara,''} which include many high-frequent ambiguous single-character particles.
+ 
+Another characteristic of this method is that the word including different character types tends to be broken by KyTea at the position where character type is changed. This characteristic is demonstrated by the third example. In the third example, \mbox{``ため池 (storage reservoir)''} is a single word consisting of \mbox{``ため (storage)''} and \mbox{``池 (reservoir)''}, but KyTea fails to recognize the word since \mbox{``ため''} and \mbox{``池''} have different character types. In contrast, our method correctly identifies the word.
+
+However, there are cases that show contrary results. In forth example, \mbox{``と (and)''} and \mbox{``うんざり (fed up)''} are different words and have the same character type \mbox{``Hiragana''}. According to the analysis of first and second examples, our method tends to form a fake word comprising of same character type, but it gives correct segmentation result. Thus, qualitative analysis is considered to be difficult.
+
+
+
+
+%Char type embedding (adaptation 1) The information of character type embeddings improves F1. The way to treat it seems to suit in our task. 
+%Dictionary embedding (adaptation 2) The information of dictionary is not effective in our task. Some reasons we consider are bellow:
+%N-gram embeddings seems to be enough information in our task since the dictionary is made from training corpus.
+%The way to make use of dictionary doesn’t seem to be appropriate.
+%N-gram embeddings The n-gram embeddings drastically improve F1.
+%The result indicates that neural architecture is useful for dealing with sparse feature.
+
+
+
+
+\section{Related Works}
+\label{sec:relatedworks}
+%We expand one of the state-of-the-art method in Japanese word 
+%segmentation (Neubig et al., 2011). They propose a pointwise
+%prediction method based on sequence labeling approach.
+
+%In Japanese, word segmentation are often performed jointly as Japanese word segmentation (JWS). 
+In JWS, supervised learning approach is widely used. One of the popular methods in JWS is to make a word lattice using a dictionary and use Viterbi decoding~\cite{kudo-yamamoto-matsumoto:2004:EMNLP,sassano2002empirical}. This approach is known to give accurate results by considering the sequence of words, but is not robust if training data is different from test data. Another popular approach employs point-wise prediction using a local window~\cite{neubig-nakata-mori:2011:ACL-HLT2011,NEUBIG10.408}. However, both approaches do not take global context into account, because they use feature templates of a fixed length. Also, both of them suffer from feature sparseness.
+
+%Recently, the study analyzing web text such as Twitter have been actively researched. In processing of web text, colloquial expression, non-standard expression, and new word are often used. These expressions can cause error. Contrary, for web text, there is unsupervised method utilizing large amount of unlabeled data\cite{mochihashi-yamada-ueda:2009:ACLIJCNLP,uchiumi-tsukahara-mochihashi:2015:ACL-IJCNLP}.
+%Moreover, there is supervising method using normalizing rule of character and word base and constructing normalization corpus~\cite{saito-EtAl:2014:Coling,sasano-kurohashi-okumura:2013:IJCNLP,kaji-kitsuregawa:2014:EMNLP2014}. The method based on unsupervised learning is low cost but has a problem to adjust the criterion of word segmentation to human annotation. Whereas, the method based on supervised learning can adapt to the known rule of normalization but is required to add new word and new normalization rule for new word and the unknown rule of normalization. 
+
+Recently, deep neural network architectures have been widely studied in the task of CWS~\cite{chen-EtAl:2015:EMNLP2,chen-EtAl:2015:ACL-IJCNLP5,pei-ge-chang:2014:P14-1,zhang-zhang-fu:2016:P16-1,cai-zhao:2016:P16-1}. These approaches are mainly divided to two types: structured prediction mode~\cite{zhang-zhang-fu:2016:P16-1,cai-zhao:2016:P16-1} and pointwise prediction model ~\cite{chen-EtAl:2015:EMNLP2,chen-EtAl:2015:ACL-IJCNLP5,pei-ge-chang:2014:P14-1}. However, deep neural network approach tends to require high computational cost in comparison with previous approaches. 
+In JWS, \newcite{morita-kawahara-kurohashi:2015:EMNLP} proposed to integrate recurrent neural network language model into JWS by interpolating it with traditional JWS. Instead of using recurrent neural architecture as side information, we directly learn word segmentation of Japanese using LSTM. 
+
+
+Recently, neural network approach for normalization is explored \cite{kann-cotterell-schutze:2016:EMNLP2016, ikeda2016norm} \newcite{kann-cotterell-schutze:2016:EMNLP2016} use character based encoder-decoder model and achieved state-of-the-art for the task of canonical
+morphological segmentation.
+The method is based on unsupervised learning and thus can be learned at low cost. However, we need to  adjust the criterion of word segmentation learned in a unsupervised manner to human annotation.
+
+
+
+
+%This is because we extend neural network approach and evaluate neural network appraoch for JWS. 
+ 
+%さらに，最近では，Twitter 等のウェブ文書の単語分割，形態素解析に対しての研究が活発である．ウェブ文書においては，口語的な表現，正規の表記ではない略語，新たに造られる新語などが多く存在し，解析の性能が落ちることが問題となっている．これに対し，生のコーパスのみを用いた教師なし学習による単語分割\cite{mochihashi-yamada-ueda:2009:ACLIJCNLP}や形態素解析\cite{uchiumi-tsukahara-mochihashi:2015:ACL-IJCNLP}，辞書追加，文字ベース，単語ベースの正規化規則を適用することによる教師あり学習による手法\cite{saito-EtAl:2014:Coling,sasano-kurohashi-okumura:2013:IJCNLP,kaji-kitsuregawa:2014:EMNLP2014}が存在する．教師なし学習による手法はコストが非常に小さいが，単語分割の基準を機械学習によって決めるため，意図した出力が難しくなる問題がある．教師あり学習による手法は，文字ベースの正規化により，コストを削減しているが，新しく造られる新語や規則による対処ができない形態素に対しては，辞書の拡張を行う必要がある．
+
+%一方，中国語の単語分割において，深層ニューラルネットワークを用いた手法が盛んに研究されている．\cite{chen-EtAl:2015:EMNLP2,chen-EtAl:2015:ACL-IJCNLP5,pei-ge-chang:2014:P14-1}．深層ニューラルネットワークによる手法は学習に時間がかかるが，文字 embedding を利用した線形時間で学習できる高性能な単語分割器も存在する\cite{ma-hinrichs:2015:ACL-IJCNLP}．日本語形態素解析においても，深層学習を利用した研究はRNNLMを利用した形態素解析\cite{morita-kawahara-kurohashi:2015:EMNLP}があるが，中国語であるような，深層ニューラルネットワークを利用した単語分割の研究は存在しない．そこで，本研究では，日本語形態素解析のための深層ニューラルネットワークを利用した日本語単語分割について分析を行った．
+
+%日本語のコーパスは，日本語書き言葉均衡コーパス\cite{maekawaBCCWJ2008}（以下，BCCWJ）が広く利用されており，書籍全般，雑誌全般，新聞，白書，ブログ， ネット掲示板，教科書，法律などのジャンルに対して，単語分割と，付加情報として，品詞，活用，基本形，読みなどがアノテーションされている．
+
+
+%\cite{kudo-yamamoto-matsumoto:2004:EMNLP}
+%\cite{neubig-nakata-mori:2011:ACL-HLT2011,NEUBIG10.408}
+%\cite{chen-EtAl:2015:EMNLP2,chen-EtAl:2015:ACL-IJCNLP5,pei-ge-chang:2014:P14-1}．
+%\cite{ma-hinrichs:2015:ACL-IJCNLP}．
+%\cite{morita-kawahara-kurohashi:2015:EMNLP}
+
+%POS tagging is solved simultaneously with word segmentation in Japanese morphological analysis~\cite{kudo-yamamoto-matsumoto:2004:EMNLP,sassano2002empirical}. 
+%On the other hand, in Chinese, word segmentation is often solved alone~\cite{chen-EtAl:2015:EMNLP2,chen-EtAl:2015:ACL-IJCNLP5,pei-ge-chang:2014:P14-1,ma-hinrichs:2015:ACL-IJCNLP}.
+%In Chinese, word segmentation using a neural network has been actively researched, but POS tagging has not actively been conducted.
+%As in the study of Japanese morphological analysis of~\newcite{neubig-nakata-mori:2011:ACL-HLT2011,NEUBIG10.408}, the information necessary for word segmentation and POS tagging has many common parts.
+%Therefore, in this research, we propose a method to solve both word segmentation and POS segmenting by neural network based on the research of~\newcite{neubig-nakata-mori:2011:ACL-HLT2011}.
+
+
+%In languages such as English where words are separated by spaces, unlike Chinese and Japanese, research to solve POS tagging by using a neural network has been conducted since ancient times~\cite{nakamura1990pos,schmid1994pos,tsuboi:2014:EMNLP2014}.
+%\newcite{schmid1994pos} reports that POS tagging by neural network improves better accuracy than the usual hidden Markov model (HMM).
+%\newcite{tsuboi:2014:EMNLP2014} proposes a method to introduce into the corpus-wide information neural network, and records the accuracy of state-of-the-art in English  POS tagging task.
+%Therefore, in this research, we propose a method to apply knowledge of these research to Japanese morpheme analysis which uses much information such as character type and dictionary.
+
+\section{Conculusion}
+%We combine Long Short-Term Memory (LSTM) for Word Segmentation (Chen et al., 2015), which has achieved state-of-the-art in Chinese Word Segmentation.
+This paper has presented an LSTM neural network approach to JWS. We have proposed to learn Japanese specific features such as character type and character N-gram as embeddings, and dictionary feature as a sparse vector. We have shown that our method has achieved state-of-the-art accuracy on various domains. 
+Our empirical results have suggested further opportunities to investigate continuous features not only for WS but also for POS tagging. 
+
+In JWS, it is important to deal with colloquial expression frequently found in dialogue conversation and web text~\cite{saito-EtAl:2014:Coling,sasano-kurohashi-okumura:2013:IJCNLP,kaji-kitsuregawa:2014:EMNLP2014}. We suppose deep neural architectures such as CNNs  may be effective in  this scenario because of its ability to learn robust representations for character and word~\cite{ling-EtAl:2015:EMNLP2}. 
+
+%Previous work in Chinese work segmentation (CWS) have succeeded in using neural network and the model achieve state-of-the-art accuracy. Unlike Chinese, Japanese has various character type such as hiragara, katakana, and kanji. Besides, traditional Japanese word segmentation utilize word dictionary. For this situation, we propose a solution to incorporate these information. Ex- perimental results show that our proposed model outperformed state-of-the-art method. Since we first introduce neural network approach for JWS, we investigate some neural network architec- ture and analyze the characteristic by comparing with current state-of-the-art method on several corpora that have different nature.
+
+%As a result, although neural network is competitive with the state-of-the-art method, it is not effective to analyze colloquial expressions. 
+%To deal with colloquial expressions, we will investigate several ways for more robust neural word segmentation in terms of neural network architecture and resource usage.
+%The architecture and resource usage we will try are bellow:
+
+%\section*{Acknowledgments}
+
+%Do not number the acknowledgment section.
+
+%\bibliography{ws}
+%\bibliographystyle{ijcai17}
+
+\bibliography{ijcnlp2017}
+\bibliographystyle{ijcnlp2017}
+
+\end{document}
